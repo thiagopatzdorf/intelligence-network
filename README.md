@@ -1,15 +1,25 @@
-# Intelligence Network
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/hero-light.svg">
+    <img alt="A mesh of independent nodes linked to each other, with no central server" src="docs/assets/hero-light.svg" width="100%">
+  </picture>
+</p>
 
-[![CI](https://github.com/aspas-labs/intelligence-network/actions/workflows/ci.yml/badge.svg)](https://github.com/aspas-labs/intelligence-network/actions/workflows/ci.yml)
-[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
-![Rust 1.85+](https://img.shields.io/badge/rust-1.85%2B-orange.svg)
-![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey.svg)
+<h1 align="center">Intelligence Network</h1>
 
-[English](README.md) | [Português (Brasil)](README.pt-BR.md) | [简体中文](README.zh-CN.md) | [Español](README.es.md)
+<p align="center"><b>Run AI across independent machines, without one central server controlling the network.</b></p>
 
-**Contents:** [Quickstart](#quickstart) · [What you can do](#what-you-can-do) · [How it works](#how-it-works-briefly) · [Where it fits](#where-it-fits) · [Install](#install) · [Run](#run) · [Models](#models) · [CLI reference](#cli-reference) · [Architecture](#architecture) · [Security](#security-and-limitations) · [Development](#development) · [License](#license)
+<p align="center">
+  <a href="https://github.com/aspas-labs/intelligence-network/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/aspas-labs/intelligence-network/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg"></a>
+  <img alt="Rust 1.85 or newer" src="https://img.shields.io/badge/rust-1.85%2B-orange.svg">
+  <img alt="Linux, macOS and Windows" src="https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-lightgrey.svg">
+</p>
 
-Run AI across independent machines without one central server controlling the network.
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.pt-BR.md">Português (Brasil)</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.es.md">Español</a>
+</p>
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Cowde-Labs/intelligence-network/main/install.sh | sh
@@ -17,22 +27,44 @@ export PATH="$HOME/.local/bin:$PATH"
 intelligence up
 ```
 
-Intelligence Network is a single Rust binary that turns a machine into a node.
-Nodes find each other over authenticated QUIC, advertise what they can run,
-route inference and training jobs to peers that can do the work, shard state
-across machines, and keep going when peers disappear. There is no account to
-create, no cloud to log into, and nothing to download except the binary.
-Models never move unless you put them there.
+## What is it?
 
-It is not a crypto project. There is no token, no blockchain, no staking and no
-marketplace. Nodes cooperate because their operators point them at each other.
+Intelligence Network is **one small program that turns a computer into a node**. Nodes
+find each other, say what work they can do, and hand jobs to whichever peer is best
+suited. If a peer disappears, the others keep going.
+
+There is no account to create, no cloud to log in to, and nothing to download but the
+program itself. Models never move unless you put them there.
+
+It is **not a crypto project**: no token, no blockchain, no staking, no marketplace.
+Nodes cooperate because their operators point them at each other.
+
+## Why would I want this?
+
+- **Put idle machines to work.** The spare computers in an office or a lab become one
+  shared pool for AI jobs, with no cloud bill. Real models run through llama.cpp (see
+  [Models](#models)).
+- **Keep AI on machines you control.** Jobs run on hardware you operate. Traffic between
+  nodes is encrypted (QUIC), every record is signed by the node that produced it, and you
+  decide which capabilities each node offers and to whom.
+- **Train across a few machines.** Split the job of adjusting a model across several
+  computers, with no single machine holding everything (reference-scale today).
+- **Stay up when machines go down.** Peers, coordinators and relays can disappear
+  mid-job and the system recovers, which the test suite exercises.
+
+> [!IMPORTANT]
+> This is early software. It has been validated on one machine and in a controlled lab,
+> **not on the public Internet**, and training is reference-scale, not frontier-scale.
+> The [honest limits](#security-and-limitations) are written down. Read them before you
+> depend on it.
 
 ## Quickstart
 
-Linux, macOS and Windows (x86_64 and arm64; Windows arm64 builds from source).
-The installer fetches the release binary and its
-checksum from GitHub Releases, verifies the checksum, and puts one file in
-`~/.local/bin`. Nothing else is installed.
+Linux, macOS and Windows (x86_64 and arm64; Windows arm64 builds from source). The
+installer fetches the release binary and its checksum from GitHub Releases, verifies the
+checksum, and puts one file in `~/.local/bin`. Nothing else is installed.
+
+**1. Install.**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Cowde-Labs/intelligence-network/main/install.sh | sh
@@ -45,31 +77,49 @@ On Windows (PowerShell):
 irm https://raw.githubusercontent.com/Cowde-Labs/intelligence-network/main/install.ps1 | iex
 ```
 
-Then:
+**2. Start a node.** This creates an identity, writes a config and starts the node in the
+background. Run it again and it reports the node that is already running.
 
-```bash
-intelligence up              # create an identity, write a config, start the node in the background
-intelligence status          # health, peers, jobs, resource counters
-intelligence infer "hello"   # route a job through the node
-intelligence down            # stop it
+```console
+$ intelligence up        # output abridged
+Intelligence Network is up
+host      4 CPU thread(s), 16876511232 bytes RAM, GPU hints: none detected
+node      952219980d82f64533e40f61a15390acebde07f7994e17bdbfd175cb4ef4d7ac
+protocol  1.6
+listen    127.0.0.1:4000
+peers     0 connected / 0 known
+capability 3 advertised
+Try: intelligence status  |  intelligence infer "hello"
 ```
 
-`up` is idempotent. Run it again and it reports the node that is already
-running. Config lands in `~/.config/intelligence/config.toml`, state and logs
-in `~/.local/state/intelligence`, and models are looked for in
-`~/.local/share/intelligence/models` (`XDG_*_HOME` variables are honoured if
-set).
+**3. Send it a job.**
 
-Out of the box the node exposes three small built-in capabilities that run on
-any CPU: `inference.text`, `evaluation.text` and `training.reference`. The
-first `infer` you run hits a tiny built-in sentiment classifier, so you get a
-label back, not a chat reply. That is deliberate: the default install has to
-work on a Raspberry Pi with no model files, and it proves the routing, identity
-and job machinery end to end before you plug in a real model. See
-[Models](#models) for the llama.cpp path.
+```console
+$ intelligence infer "this is great"
+state: Succeeded
+output: {
+  "input_hash": "143163170d463e2ed64529ed40829d4dfce334ce2dd298ccfdfe7c8e9f6d9922",
+  "label": "positive",
+  "model": "builtin.tiny-sentiment.v1",
+  "score": 0.6666666865348816,
+  "tokens": 3
+}
+```
 
-To try the peer-to-peer part on one laptop, start a second node with its own
-config and point it at the first:
+> [!NOTE]
+> The first `infer` runs a tiny built-in sentiment classifier, so you get a label back,
+> not a chat reply. That is deliberate: the default install has to work on a Raspberry Pi
+> with no model files, and it proves the identity, routing and job machinery end to end
+> before you plug in a real model. See [Models](#models) for the llama.cpp path.
+
+**4. Stop it** with `intelligence down`. Something off? `intelligence doctor` checks
+config, identity, storage permissions, the QUIC endpoint, NAT reachability, detected
+hardware, local model files and node health, and tells you what to fix.
+
+### See the network part on one laptop
+
+Start a second node with its own config and point it at the first. It picks a free port
+by itself if `4000` is taken.
 
 ```bash
 intelligence up
@@ -78,13 +128,13 @@ intelligence --config /tmp/node-b.toml network peers
 intelligence --config /tmp/node-b.toml infer "this is great"
 ```
 
-Node B discovers node A, learns its capabilities, and routes the job to
-whichever peer has the best local evidence for it. Stop node A and node B keeps
-serving what it can on its own.
+Node B discovers node A, learns its capabilities, and routes the job to whichever peer
+has the best local evidence for it (`peers 1 connected / 1 known`). Stop node A and node B
+keeps serving what it can on its own.
 
-Something off? `intelligence doctor` checks config, identity, storage
-permissions, the QUIC endpoint, NAT reachability, detected hardware, local
-model files and node health, and tells you what to fix.
+Config lands in `~/.config/intelligence/config.toml`, state and logs in
+`~/.local/state/intelligence`, and models are looked for in
+`~/.local/share/intelligence/models` (`XDG_*_HOME` variables are honoured if set).
 
 ## What you can do
 
@@ -119,6 +169,24 @@ model files and node health, and tells you what to fix.
 
 ## How it works, briefly
 
+```mermaid
+flowchart LR
+    CLI[intelligence CLI] -- local admin socket --> A
+    subgraph A[Node A]
+        RT[runtime<br/>bounded jobs + bubblewrap]
+        TR[local trust<br/>evidence per peer]
+    end
+    subgraph B[Node B]
+        RT2[runtime]
+    end
+    subgraph C[Node C]
+        RT3[runtime]
+    end
+    A <-- "signed records over QUIC" --> B
+    A <-- "signed records over QUIC" --> C
+    B <-- "DHT / peer exchange" --> C
+```
+
 Each node has a persistent Ed25519 identity. Peers talk over QUIC and bind the
 transport to that identity, so every record a node receives is signed by the
 peer that produced it: addresses, capability advertisements, DHT records,
@@ -138,24 +206,6 @@ workers under aggregators so the coordinator only sees aggregates, replicates
 optimizer state and checkpoints across peers, and rotates coordination roles
 using monotonically increasing terms when a role holder disappears.
 
-```mermaid
-flowchart LR
-    CLI[intelligence CLI] -- local admin socket --> A
-    subgraph A[Node A]
-        RT[runtime<br/>bounded jobs + bubblewrap]
-        TR[local trust<br/>evidence per peer]
-    end
-    subgraph B[Node B]
-        RT2[runtime]
-    end
-    subgraph C[Node C]
-        RT3[runtime]
-    end
-    A <-- "signed records over QUIC" --> B
-    A <-- "signed records over QUIC" --> C
-    B <-- "DHT / peer exchange" --> C
-```
-
 ```text
 all updates -> one coordinator       NO
 one optimizer-state authority        NO
@@ -166,13 +216,23 @@ model must fit on one worker         NO
 
 ## Where it fits
 
-A rough orientation, not a benchmark. Check each project's own docs for current details.
+A rough orientation, not a benchmark. The facts below come from each project's own README
+or site, read in October 2026; details change, so check upstream before relying on them.
 
-| Project | What it is | How Intelligence Network differs |
-|---|---|---|
-| [libp2p](https://libp2p.io) | Networking library for building P2P apps | This is a complete node (identity, discovery, job routing, training) in one binary, not a toolkit |
-| [Hivemind](https://github.com/learning-at-home/hivemind) | PyTorch library for decentralized training | Rust, no Python stack; also routes inference and keeps trust local per node |
-| [Petals](https://github.com/bigscience-workshop/petals) | Collaborative inference/fine-tuning of large LLMs | Petals targets large public LLMs; this project is reference-scale today and model-agnostic through sandboxed processes |
+| Project | What it is | Language · License | Inference | Training | Account or token |
+|---|---|---|---|---|---|
+| **Intelligence Network** | A node program that routes AI jobs between independent machines | Rust · AGPL-3.0 | Yes (tiny built-in model; llama.cpp adapter is experimental) | Reference-scale | None |
+| [Petals](https://github.com/bigscience-workshop/petals) | Runs large language models "BitTorrent-style" over a public swarm | Python · MIT | Yes | Fine-tuning | Hugging Face login only for gated models |
+| [Hivemind](https://github.com/learning-at-home/hivemind) | PyTorch library for decentralized deep learning | Python · MIT | Not the focus | Yes | None mentioned |
+| [exo](https://github.com/exo-explore/exo) | Joins several devices into one cluster to run LLMs locally | Python and Rust · Apache-2.0 | Yes | Not mentioned | None mentioned |
+| [Ollama](https://github.com/ollama/ollama) | Runs LLMs locally on a single machine | Go · MIT | Yes | No | None for local use |
+| [BOINC](https://github.com/BOINC/boinc) | Volunteer computing for science | C++ and others · LGPL-3.0 | Not AI-focused | Not AI-focused | Project accounts |
+| [rust-libp2p](https://github.com/libp2p/rust-libp2p) | A networking library, not a product | Rust · MIT | No | No | None |
+
+What is different here, in one line each: a single Rust binary rather than a library or a
+Python stack; QUIC with a signed identity per node; trust that is local and
+evidence-based instead of a global score; remote jobs bounded by size, memory, CPU and
+deadline and sandboxed in bubblewrap; and no token or account anywhere.
 
 ## Install
 
@@ -301,6 +361,9 @@ models or builds.
 Global flags: `--config <path>` (or `INTELLIGENCE_CONFIG`) and `--json` for
 machine-readable output on every command that has any.
 
+<details>
+<summary>Show every command</summary>
+
 ### Lifecycle
 
 | Command | What it does |
@@ -372,6 +435,8 @@ machine-readable output on every command that has any.
 `intelligence <command> --help` has the full flag list. Pre-1.0 command names
 still work as hidden aliases.
 
+</details>
+
 ## Advanced configuration
 
 `intelligence config` prints the effective configuration. Every field can be
@@ -380,6 +445,9 @@ same name (`INTELLIGENCE_LISTEN_ADDR`, `INTELLIGENCE_BOOTSTRAP`,
 `INTELLIGENCE_RELAY_ADDRESSES`, `INTELLIGENCE_STORAGE_QUOTA_BYTES`,
 `INTELLIGENCE_RUNTIME_MAX_CONCURRENT_JOBS`, and so on). A fully commented
 example is in [`config/node.toml.example`](config/node.toml.example).
+
+<details>
+<summary>Show the settings you are likely to touch</summary>
 
 Things you are likely to touch:
 
@@ -416,6 +484,8 @@ against observed evidence.
 **Training.** `training_memory_bytes` is the local state budget a worker must
 fit its assigned shard into. `training_window_delay_ms` injects straggler
 delay for experiments; leave it at zero.
+
+</details>
 
 ## Architecture
 
